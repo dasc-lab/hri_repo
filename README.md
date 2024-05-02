@@ -16,6 +16,7 @@ The system comprises
   - [Orange Cube](https://docs.px4.io/main/en/flight_controller/cubepilot_cube_orange.html)
 - [Vicon Coordinate System](https://www.vicon.com/) that provides real time information about the pose of the robot. Note that a minimum of three 'Vicon Pearls' would be needed.
 
+<![alt text](http://url/to/img.png)>
 
 ## Software Prerequisites
 **On Xavier**:
@@ -49,7 +50,7 @@ The system comprises
   * In a new terminal, run the command `ros2 topic echo /your_topic_name' to visualize the broadcast information
 * Set up PX4_msgs
    * Download px4_msgs_main and move it to `~ros2_ws/src`
-   * `colcon_build --symlink-install`, for more info, see [colcon_build](https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html)
+   * `colcon build --symlink-install`, for more info, see [colcon_build](https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Colcon-Tutorial.html)
 ### Rover
 * Set up Raspberry PI (on ground station computer)
   * SSH into Raspberry PI onboard the rover (may take minutes for Raspberry Pi to boot up)
