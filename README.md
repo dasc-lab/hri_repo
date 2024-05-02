@@ -16,7 +16,7 @@ The system comprises
   - [Orange Cube](https://docs.px4.io/main/en/flight_controller/cubepilot_cube_orange.html)
 - [Vicon Coordinate System](https://www.vicon.com/) that provides real time information about the pose of the robot. Note that a minimum of three 'Vicon Pearls' would be needed.
 
-<![alt text](http://url/to/img.png)>
+![alt text](rover.png)
 
 ## Software Prerequisites
 **On Xavier**:
