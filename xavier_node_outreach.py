@@ -190,6 +190,11 @@ class MinimalSubscriber(Node):
 		self.publisher_.publish(msg)
 		self.get_logger().info('Publishing coordinates')
 		self.i += 1
+	def draw_straight_line(self, img, coordinates):
+		img = cv2.line()
+		for i in range(len(coordinates) - 1):
+			cv2.line(img, coordinates[i], coordinates[i+1], (255,0,0), thickness=2)
+		return img
 	def draw_dotted_curve(self, img, coordinates, dot_spacing=8,curve_color=(255, 0, 0)):
     # Create a blank image
     
@@ -283,17 +288,14 @@ class MinimalSubscriber(Node):
 				# Draw the complete trajectory for this circle
 				
 				if (len(self.trails[i])>=2):
-					color_image = self.draw_dotted_curve(color_image,self.trails[i])
-				# if ((time.time() - self.start_time) > 5):
-				#     for trail in self.trails:
-				#         if len(trail) > self.remove_index:
-				#             del trail[:self.remove_index]
-				if ((time.time() - self.start_time) > 20) :
-					if (len(trail) > self.remove_index for trail in self.trails):
-						if (time.time() - self.curr_time > 3):
-							self.curr_time = time.time()
-							#self.trails = [trail[self.remove_index:] for trail in self.trails]
-							self.trails[i] = self.trails[i][40:]
+					color_image = self.draw_straight_line(color_image,self.trails[i])
+				
+				# if ((time.time() - self.start_time) > 20) :
+				# 	if (len(trail) > self.remove_index for trail in self.trails):
+				# 		if (time.time() - self.curr_time > 3):
+				# 			self.curr_time = time.time()
+				# 			#self.trails = [trail[self.remove_index:] for trail in self.trails]
+				# 			self.trails[i] = self.trails[i][40:]
 				# Draw the current position of the circle
 				
 				if pos != (None,None):
