@@ -150,9 +150,12 @@ class MinimalSubscriber(Node):
 	
 	def pixel_to_world_trans(self, pixel_coordinates):
 		'''
-		Deprojects a point from 2D pixel space to 3D world space
+		Deprojects a point from 2D pixel space to 3D world space in robot NED frame
 		'''
 		def world_to_robot( world_coordinates):
+			'''
+			Transforms a point from world frame to robot frame
+			'''
 			robot_coordinates = (world_coordinates[1], world_coordinates[0], -1 * world_coordinates[2])
 			return robot_coordinates
 		frame = self.pipe.wait_for_frames()
@@ -209,7 +212,7 @@ class MinimalSubscriber(Node):
 		return img
 	def timer_callback(self):
 		'''
-		Main loop that draws trajectories
+		Main loop that draws trajectories and sends frames to Hololens 2
 		'''
 		#pdb.set_trace()
 		
