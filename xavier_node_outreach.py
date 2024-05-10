@@ -2,24 +2,27 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import *
 import pdb
-from geometry_msgs.msg import TransformStamped, Quaternion
+from geometry_msgs.msg import TransformStamped
 from px4_msgs.msg import TrajectorySetpoint
 import numpy as np
 import cv2
+from geometry_msgs.msg import Quaternion
+from tf2_ros.transform_listener import TransformListener
 import socket
 from pyrealsense2 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
 import time
 from stream_transform import rot_to_hom, world_to_drone,drone_to_camera, camera_to_world_calibrate
 import apriltag
+from rover_node import MinimalPublisher
 import ast
 import threading
-
 class MinimalSubscriber(Node):
    
 	def __init__(self):
 		## initializing the camera
 		super().__init__('minimal_subscriber')
+		#self.output = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'MPEG'), 30, (640,480))
 		###################################################################################################
 		####################### Declare and Initialize Preliminary Parameters ######################
 		###################################################################################################
@@ -74,6 +77,7 @@ class MinimalSubscriber(Node):
 		########### Subscribers ###########
 		self.robot_subscription = self.create_subscription(
 		    TransformStamped,
+		    #'/vicon/kepler/kepler',
 		    '/vicon/px4_1/px4_1',
 		    self.listener_callback_robot,
 		    10)
@@ -89,6 +93,7 @@ class MinimalSubscriber(Node):
 		########### Set up timers for testing ###########
 		###################################################################################################
 		self.timer = self.create_timer(1./50., self.timer_callback)
+		#self.loop_timer = self.create_timer(1./1000., self.loop_callback)
 		self.start_time = time.time()
 		self.curr_time = time.time()
 		self.image_time = time.time()
@@ -101,10 +106,14 @@ class MinimalSubscriber(Node):
 		self.robot_quat = msg.transform.rotation
 		self.robot_trans = msg.transform.translation
 	    
+	    #self.get_logger().info('I heard: "%s"' % msg.data)
+
 	def listener_callback_camera(self, msg):
 		self.quat = msg.transform.rotation
 		self.trans = msg.transform.translation
-	    
+	    #print("camera_info received")
+	    #self.get_logger().info('I heard: "%s"' % msg.data)
+	# def create_px4_msg(self, world_coordinates):
 		
 	###################################################################################################
 	###################### Set up Helpers ######################
@@ -149,9 +158,6 @@ class MinimalSubscriber(Node):
 	
 	
 	def pixel_to_world_trans(self, pixel_coordinates):
-		'''
-		Deprojects a point from 2D pixel space to 3D world space
-		'''
 		def world_to_robot( world_coordinates):
 			robot_coordinates = (world_coordinates[1], world_coordinates[0], -1 * world_coordinates[2])
 			return robot_coordinates
@@ -168,10 +174,8 @@ class MinimalSubscriber(Node):
 		world_coordinates = world_to_robot(predicted)
 		return world_coordinates
 	
+	#def loop_callback(self):
 	def create_TrajectorySetpoint_msg(self, world_coordinates):
-		'''
-		Creates a TrajectorySetpoint msg to be published to the rover
-		'''
 		msg = TrajectorySetpoint()
 		#msg.raw_mode = False
 		msg.position[0] = world_coordinates[0]
@@ -193,7 +197,8 @@ class MinimalSubscriber(Node):
 		self.get_logger().info('Publishing coordinates')
 		self.i += 1
 	def draw_dotted_curve(self, img, coordinates, dot_spacing=8,curve_color=(255, 0, 0)):
-
+    # Create a blank image
+    
 		dashed = 0
 		# Draw dotted lines along the curve
 		for i in range(len(coordinates) - 1):
@@ -205,12 +210,9 @@ class MinimalSubscriber(Node):
 				dashed = dashed + 1
 			else:
 				dashed = 0
-
+		#img = draw_traj(img, coordinates)
 		return img
 	def timer_callback(self):
-		'''
-		Main loop that draws trajectories
-		'''
 		#pdb.set_trace()
 		
 		frame = self.pipe.wait_for_frames()
@@ -223,10 +225,21 @@ class MinimalSubscriber(Node):
 		if self.is_target_set and self.target is not None and self.is_published is False:
 			self.publish_msg()
 			self.is_published = True
-		
+		# if data:
+		# 	data = data.decode('utf-8')
+		# 	data = ast.literal_eval(data)
+		# 	self.is_target_set = True
+		# 	self.target = data
+		# if self.is_target_set and (self.target is not None):
+			############## publish and make the rover move ##############
+			# self.publish_msg()
+		# camera_trans = self.trans
+		# camera_quat = self.quat
+		#print(robot_trans, robot_quat)
+		# print(robot_quat, robot_trans)
 		if not (not robot_trans or not robot_quat ):
 			# print("inside loop")
-			
+			#or not camera_trans or not camera_quat
 
 			r_robot = R.from_quat(np.array([robot_quat.x, robot_quat.y, robot_quat.z,robot_quat.w]))
 			#r_camera = R.from_quat(np.array([camera_quat.x, camera_quat.y, camera_quat.z, camera_quat.w]))
@@ -242,6 +255,7 @@ class MinimalSubscriber(Node):
 			
 			drone_coordinates = world_to_drone(hom_matrix_camera, robot_world_coord)
 			camera_coordinates = drone_to_camera(drone_coordinates)
+			#coordinates = (-0.2,-0.1,3)
 			pixel_coordinates = np.floor(rs.rs2_project_point_to_pixel(self.color_intr, camera_coordinates))
 			#print(pixel_coordinates)
 			
@@ -251,7 +265,8 @@ class MinimalSubscriber(Node):
 			color_image = np.asanyarray(color_frame.get_data())
 			
 			
-			
+			#depth = depth_frame.get_distance(100,100)
+			#depth_point = rs.rs2_deproject_pixel_to_point(self.depth_intrin, [100,100], depth)
 			
 			pixel_coordinates = (int(pixel_coordinates[0]), int(pixel_coordinates[1]))
 			if self.target is not None and self.is_target_set and self.target_reached(pixel_coordinates, self.target):
@@ -274,9 +289,12 @@ class MinimalSubscriber(Node):
 						self.trails[i].append((int(pos[0]), int(pos[1])))
 				# Draw the complete trajectory for this circle
 				
-				if (len(self.trails[i])>=8):
+				if (len(self.trails[i])>=2):
 					color_image = self.draw_dotted_curve(color_image,self.trails[i])
-				
+				# if ((time.time() - self.start_time) > 5):
+				#     for trail in self.trails:
+				#         if len(trail) > self.remove_index:
+				#             del trail[:self.remove_index]
 				if ((time.time() - self.start_time) > 20) :
 					if (len(trail) > self.remove_index for trail in self.trails):
 						if (time.time() - self.curr_time > 3):
@@ -295,6 +313,7 @@ class MinimalSubscriber(Node):
 			cv2.imshow('depth', depth_cm)
 			self.transmit_time = time.time()
 			color_image = cv2.flip(color_image, -1)
+			#self.output.write(color_image)
 			_, buffer = cv2.imencode('.jpg', color_image)
 
 			# Send the size of the frame and then the frame
@@ -302,18 +321,26 @@ class MinimalSubscriber(Node):
 			size_buffer = frame_size.to_bytes(4, 'big')
 			
 
-
+			# try:
+			# 	print("before send")
+			# 	self.client_socket.sendall(size_buffer)
+			# 	self.client_socket.sendall(buffer.tobytes())
+			# 	print("after send")
+			# except socket.error as e:
+			# 	print("did not send")
+			# 	pass
 
 			self.client_socket.sendall(size_buffer)
 			self.client_socket.sendall(buffer.tobytes())
+			#self.client_socket.setblocking(False)
 			
 			transmit_time = time.time() - self.transmit_time
 			#print('image processing time: ' + str(image_time) + 'transmit time: ' + str(transmit_time))
-
 			# Break the loop if 'q' is pressed
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				rclpy.shutdown()
 			if cv2.waitKey(1) == 115:
+			#cv.imwrite(str(device)+'_aligned_depth.png', depth_image)
 				cv2.imwrite('_aligned_color.png',color_image)
 				print("save image to directory")
 				
@@ -326,9 +353,6 @@ class MinimalSubscriber(Node):
 # VIDEO_PORT = 9999
 # COORD_PORT = 9998
 def coordinate_reception(xavier_node):
-	'''
-	Second thread to handle incoming message through socket and set the parameters in xavier node
-	'''
 	HOST = '192.168.1.134'  # Xavier's IP address
 	VIDEO_PORT = 9999
 	COORD_PORT = 9996
@@ -344,7 +368,7 @@ def coordinate_reception(xavier_node):
 		while True:
 			coord_data = coord_client_socket.recv(1024).decode('utf-8')
 			if not coord_data:
-				break
+			    break
 			coord_data = ast.literal_eval(coord_data)
 			xavier_node.target = coord_data
 			xavier_node.is_target_set = True
@@ -352,14 +376,16 @@ def coordinate_reception(xavier_node):
 			print(f"Received coordinates: {coord_data}")
 			# Process the received coordinates here
 	finally:
-		coord_client_socket.close()
-		coord_server_socket.close()
+	    coord_client_socket.close()
+	    coord_server_socket.close()
 
 
 
 def main(args=None):
 	
 	rclpy.init(args=args)
+	#minimal_publisher = MinimalPublisher()
+		#rclpy.spin(minimal_subscriber)
 	minimal_subscriber = MinimalSubscriber()
 	socket_thread = threading.Thread(target=coordinate_reception, args=(minimal_subscriber,))
 	socket_thread.start()
