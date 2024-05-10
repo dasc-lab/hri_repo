@@ -7,7 +7,6 @@ from px4_msgs.msg import TrajectorySetpoint
 import numpy as np
 import cv2
 from geometry_msgs.msg import Quaternion
-from tf2_ros.transform_listener import TransformListener
 import socket
 from pyrealsense2 import pyrealsense2 as rs
 from scipy.spatial.transform import Rotation as R
@@ -35,7 +34,7 @@ class MinimalSubscriber(Node):
 		self.pixel_y = None
 		self.remove_index = 20
 		self.frame_count = 0
-		self.frame_limit = 120
+		self.frame_limit = 60
 		self.is_target_set = False
 		self.target = None
 		self.circle_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)] #Blue, Green, Red, Orange, Yellow...
@@ -140,6 +139,7 @@ class MinimalSubscriber(Node):
 
 # Function to send circle data to Unity
 	def send_circle_data(client_socket, circles):
+		
 		radius = 2
 		circle_data = ','.join(f"{x},{y},{radius}" for x, y in circles)
 		circle_data_bytes = circle_data.encode('utf-8')
@@ -170,6 +170,10 @@ class MinimalSubscriber(Node):
 	
 	#def loop_callback(self):
 	def create_TrajectorySetpoint_msg(self, world_coordinates):
+
+		'''
+		Create a TrjactorySetpoint message to command the rover
+		'''
 		msg = TrajectorySetpoint()
 		#msg.raw_mode = False
 		msg.position[0] = world_coordinates[0]
@@ -190,11 +194,13 @@ class MinimalSubscriber(Node):
 		self.publisher_.publish(msg)
 		self.get_logger().info('Publishing coordinates')
 		self.i += 1
+
 	def draw_straight_line(self, img, coordinates):
 		img = cv2.line()
 		for i in range(len(coordinates) - 1):
 			cv2.line(img, coordinates[i], coordinates[i+1], (255,0,0), thickness=2)
 		return img
+	
 	def draw_dotted_curve(self, img, coordinates, dot_spacing=8,curve_color=(255, 0, 0)):
     # Create a blank image
     
@@ -210,6 +216,7 @@ class MinimalSubscriber(Node):
 			else:
 				dashed = 0
 		return img
+	
 	def timer_callback(self):		
 		frame = self.pipe.wait_for_frames()
 		depth_frame = frame.get_depth_frame()
@@ -237,7 +244,6 @@ class MinimalSubscriber(Node):
 		# print(robot_quat, robot_trans)
 		if not (not robot_trans or not robot_quat ):
 			# print("inside loop")
-			#or not camera_trans or not camera_quat
 
 			r_robot = R.from_quat(np.array([robot_quat.x, robot_quat.y, robot_quat.z,robot_quat.w]))
 			#r_camera = R.from_quat(np.array([camera_quat.x, camera_quat.y, camera_quat.z, camera_quat.w]))
@@ -308,7 +314,6 @@ class MinimalSubscriber(Node):
 			cv2.imshow('depth', depth_cm)
 			self.transmit_time = time.time()
 			color_image = cv2.flip(color_image, -1)
-			#self.output.write(color_image)
 			_, buffer = cv2.imencode('.jpg', color_image)
 
 			# Send the size of the frame and then the frame
@@ -316,18 +321,9 @@ class MinimalSubscriber(Node):
 			size_buffer = frame_size.to_bytes(4, 'big')
 			
 
-			# try:
-			# 	print("before send")
-			# 	self.client_socket.sendall(size_buffer)
-			# 	self.client_socket.sendall(buffer.tobytes())
-			# 	print("after send")
-			# except socket.error as e:
-			# 	print("did not send")
-			# 	pass
 
 			self.client_socket.sendall(size_buffer)
 			self.client_socket.sendall(buffer.tobytes())
-			#self.client_socket.setblocking(False)
 			
 			transmit_time = time.time() - self.transmit_time
 			#print('image processing time: ' + str(image_time) + 'transmit time: ' + str(transmit_time))
@@ -335,7 +331,6 @@ class MinimalSubscriber(Node):
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				rclpy.shutdown()
 			if cv2.waitKey(1) == 115:
-			#cv.imwrite(str(device)+'_aligned_depth.png', depth_image)
 				cv2.imwrite('_aligned_color.png',color_image)
 				print("save image to directory")
 				

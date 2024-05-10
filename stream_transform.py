@@ -47,12 +47,22 @@ def camera_to_world(hom_mat, camera_coord):
     return world_coordinates[0:3]
 
 def world_to_camera(world_coordinates):
+    '''
+    Transform point from world to camera coordinate system with calibrated extrinsincs matrix
+    
+    world coordinates: np.array 3x1 vector, the coordinate of a point in world coordinate system
+    '''
     world_coordinates = np.append(world_coordinates,1)
     hom_mat = extrinsics
     camera_coord = hom_mat @ world_coordinates
     camera_coord = camera_coord[0:3]
     return camera_coord
 def camera_to_world_calibrate(camera_coordinates):
+    '''
+    Transform point from camera to world coordinate system with calibrated extrinsincs matrix
+    
+    camera coordinates: np.array 3x1 vector, the coordinate of a point in camera coordinate system
+    '''
     camera_coordinates = np.append(camera_coordinates,1)
     hom_mat = extrinsics
     hom_mat = np.linalg.inv(hom_mat)
