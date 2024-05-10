@@ -14,7 +14,6 @@ from scipy.spatial.transform import Rotation as R
 import time
 from stream_transform import rot_to_hom, world_to_drone,drone_to_camera, camera_to_world_calibrate
 import apriltag
-from rover_node import MinimalPublisher
 import ast
 import threading
 class MinimalSubscriber(Node):
@@ -22,7 +21,6 @@ class MinimalSubscriber(Node):
 	def __init__(self):
 		## initializing the camera
 		super().__init__('minimal_subscriber')
-		#self.output = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'MPEG'), 30, (640,480))
 		###################################################################################################
 		####################### Declare and Initialize Preliminary Parameters ######################
 		###################################################################################################
@@ -44,7 +42,7 @@ class MinimalSubscriber(Node):
 		self.pos_list = [() for _ in range(0, self.num_robot)]
 		self.trails = [[] for _ in range(0, self.num_robot)]
 		self.is_published = False
-
+		self.reset = False
 		###################################################################################################
 		##################### Setup server ######################
 		###################################################################################################
@@ -64,8 +62,7 @@ class MinimalSubscriber(Node):
 		self.cfg = rs.config()
 		self.cfg.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8,30)
 		self.cfg.enable_stream(rs.stream.depth, 640, 480, rs.format.z16,30)
-		#self.cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8,30)
-		#self.cfg.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16,30)
+		
 		self.c = self.pipe.start(self.cfg)
 		self.profile = self.c.get_stream(rs.stream.color)
 		self.depth_image = self.c.get_stream(rs.stream.depth)
@@ -77,7 +74,6 @@ class MinimalSubscriber(Node):
 		########### Subscribers ###########
 		self.robot_subscription = self.create_subscription(
 		    TransformStamped,
-		    #'/vicon/kepler/kepler',
 		    '/vicon/px4_1/px4_1',
 		    self.listener_callback_robot,
 		    10)
@@ -111,9 +107,7 @@ class MinimalSubscriber(Node):
 	def listener_callback_camera(self, msg):
 		self.quat = msg.transform.rotation
 		self.trans = msg.transform.translation
-	    #print("camera_info received")
-	    #self.get_logger().info('I heard: "%s"' % msg.data)
-	# def create_px4_msg(self, world_coordinates):
+	    
 		
 	###################################################################################################
 	###################### Set up Helpers ######################
@@ -136,7 +130,7 @@ class MinimalSubscriber(Node):
 			x1, y1 = point1
 			x2, y2 = point2
 			return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-		if euclidean_distance(target_pixel_coordinates,actual_pixel_coordinates) < 10:
+		if euclidean_distance(target_pixel_coordinates,actual_pixel_coordinates) < 20:
 			return True
 		else:
 			return False
@@ -210,18 +204,17 @@ class MinimalSubscriber(Node):
 				dashed = dashed + 1
 			else:
 				dashed = 0
-		#img = draw_traj(img, coordinates)
 		return img
-	def timer_callback(self):
-		#pdb.set_trace()
-		
+	def timer_callback(self):		
 		frame = self.pipe.wait_for_frames()
 		depth_frame = frame.get_depth_frame()
 		color_frame = frame.get_color_frame()
 		
 		robot_trans = self.robot_trans
 		robot_quat = self.robot_quat
-		
+		if self.reset == True:
+			self.trails = [[] for _ in range(0, self.num_robot)]
+			self.reset = False
 		if self.is_target_set and self.target is not None and self.is_published is False:
 			self.publish_msg()
 			self.is_published = True
@@ -368,16 +361,19 @@ def coordinate_reception(xavier_node):
 		while True:
 			coord_data = coord_client_socket.recv(1024).decode('utf-8')
 			if not coord_data:
-			    break
-			coord_data = ast.literal_eval(coord_data)
-			xavier_node.target = coord_data
-			xavier_node.is_target_set = True
-			xavier_node.is_published = False
-			print(f"Received coordinates: {coord_data}")
+				break
+			if coord_data == 'reset':
+				xavier_node.reset = True
+			else:
+				coord_data = ast.literal_eval(coord_data)
+				xavier_node.target = coord_data
+				xavier_node.is_target_set = True
+				xavier_node.is_published = False
+				print(f"Received coordinates: {coord_data}")
 			# Process the received coordinates here
 	finally:
-	    coord_client_socket.close()
-	    coord_server_socket.close()
+		coord_client_socket.close()
+		coord_server_socket.close()
 
 
 
