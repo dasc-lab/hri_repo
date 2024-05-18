@@ -42,6 +42,7 @@ class MinimalSubscriber(Node):
 		self.trails = [[] for _ in range(0, self.num_robot)]
 		self.is_published = False
 		self.reset = False
+		self.rover_at_target = False
 		###################################################################################################
 		##################### Setup server ######################
 		###################################################################################################
@@ -129,7 +130,7 @@ class MinimalSubscriber(Node):
 			x1, y1 = point1
 			x2, y2 = point2
 			return np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-		if euclidean_distance(target_pixel_coordinates,actual_pixel_coordinates) < 20:
+		if euclidean_distance(target_pixel_coordinates,actual_pixel_coordinates) < 10:
 			return True
 		else:
 			return False
@@ -202,8 +203,9 @@ class MinimalSubscriber(Node):
 		return img
 	
 	def draw_dotted_curve(self, img, coordinates, dot_spacing=8,curve_color=(255, 0, 0)):
-    # Create a blank image
-    
+		'''
+		draw dotted curve for past trajectories
+		'''
 		dashed = 0
 		# Draw dotted lines along the curve
 		for i in range(len(coordinates) - 1):
@@ -274,6 +276,7 @@ class MinimalSubscriber(Node):
 			
 			pixel_coordinates = (int(pixel_coordinates[0]), int(pixel_coordinates[1]))
 			if self.target is not None and self.is_target_set and self.target_reached(pixel_coordinates, self.target):
+				self.rover_at_target = True
 				self.is_target_set = False
 				self.target = None
 			self.image_time=time.time()
@@ -367,7 +370,13 @@ def coordinate_reception(xavier_node):
 				xavier_node.is_target_set = True
 				xavier_node.is_published = False
 				print(f"Received coordinates: {coord_data}")
-			# Process the received coordinates here
+				while xavier_node.rover_at_target is False:
+					time.sleep(1)
+				if xavier_node.rover_at_target is True:
+					xavier_node.rover_at_target = False
+					message = "done"
+					coord_client_socket.sendall(message.encode('utf-8'))
+			
 	finally:
 		coord_client_socket.close()
 		coord_server_socket.close()

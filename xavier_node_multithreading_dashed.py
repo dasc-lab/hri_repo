@@ -196,7 +196,9 @@ class MinimalSubscriber(Node):
 		self.get_logger().info('Publishing coordinates')
 		self.i += 1
 	def draw_dotted_curve(self, img, coordinates, dot_spacing=8,curve_color=(255, 0, 0)):
-
+		'''
+		draw dotted curve for past trajectories
+		'''
 		dashed = 0
 		# Draw dotted lines along the curve
 		for i in range(len(coordinates) - 1):
