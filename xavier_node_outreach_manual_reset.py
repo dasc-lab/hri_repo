@@ -45,6 +45,7 @@ class MinimalSubscriber(Node):
 		self.reset = False
 		self.rover_at_target = False
 		self.waypoints = [(100,400), (100,100),(300,200),(500,100),(500,400)]
+		self.waypoints = [(500,100), (500,400),(300,200),(100,400),(100,100)]
 		self.waypoint_threshold = 0
 		###################################################################################################
 		##################### Setup server ######################
@@ -176,12 +177,12 @@ class MinimalSubscriber(Node):
 		#waypoints = [(100,100),(100,400), (300,200),(500,100),(500,400)]
 		font = cv2.FONT_HERSHEY_SIMPLEX
 		thickness = 2
-		fontscale = 1
+		fontscale = 3
 		for waypoint in waypoints_arr:
 			self.draw_circle(img, waypoint, self.radius,(0,0,255))
 		counter = 1
-		for center in self.waypoints_arr:
-			cv2.putText(img, str(counter), center, fontscale, (0,0,255), thickness)
+		for center in waypoints_arr:
+			cv2.putText(img, str(counter), center, fontscale, font, (0,0,255), thickness)
 			counter = counter + 1
 	#def loop_callback(self):
 	def create_TrajectorySetpoint_msg(self, world_coordinates):
@@ -322,7 +323,7 @@ class MinimalSubscriber(Node):
 				# 			#self.trails = [trail[self.remove_index:] for trail in self.trails]
 				# 			self.trails[i] = self.trails[i][40:]
 				# Draw the current position of the circle
-				self.draw_waypoints(color_image, self.waypoints_arr[self.waypoint_threshold:])
+				self.draw_waypoints(color_image, self.waypoints[self.waypoint_threshold:])
 				if pos != (None,None):
 					self.draw_circle(color_image, (int(pos[0]), int(pos[1])), self.radius, self.circle_colors[i])
 				if self.is_target_set and (self.target is not None):
