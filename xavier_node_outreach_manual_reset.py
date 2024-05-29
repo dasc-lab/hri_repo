@@ -46,6 +46,7 @@ class MinimalSubscriber(Node):
 		self.rover_at_target = False
 		self.waypoints = [(100,400), (100,100),(300,200),(500,100),(500,400)]
 		self.waypoints = [(500,100), (500,400),(300,200),(100,400),(100,100)]
+		self.numbers = [1,2,3,4,5]
 		self.waypoint_threshold = 0
 		###################################################################################################
 		##################### Setup server ######################
@@ -173,17 +174,18 @@ class MinimalSubscriber(Node):
 		world_coordinates = world_to_robot(predicted)
 		return world_coordinates
 	
-	def draw_waypoints(self, img, waypoints_arr):
+	def draw_waypoints(self, img, waypoints_arr, num_arr):
 		#waypoints = [(100,100),(100,400), (300,200),(500,100),(500,400)]
 		font = cv2.FONT_HERSHEY_SIMPLEX
 		thickness = 2
 		fontscale = 3
 		for waypoint in waypoints_arr:
 			self.draw_circle(img, waypoint, self.radius,(0,0,255))
-		counter = 1
-		for center in waypoints_arr:
-			cv2.putText(img, str(counter), center, fontscale, font, (0,0,255), thickness)
-			counter = counter + 1
+		assert len(num_arr) == len(waypoints_arr)
+		for number,center in zip(num_arr, waypoints_arr):
+			center = (center[0]-3, center[1]-2)
+			cv2.putText(img, str(number), center, font, fontscale,  (0,0,255), thickness)
+			
 	#def loop_callback(self):
 	def create_TrajectorySetpoint_msg(self, world_coordinates):
 
@@ -243,6 +245,8 @@ class MinimalSubscriber(Node):
 		robot_quat = self.robot_quat
 		if self.reset == True:
 			self.trails = [[] for _ in range(0, self.num_robot)]
+			self.is_target_set = False
+			self.target = None
 			self.waypoint_threshold = 0
 			self.reset = False
 		if self.is_target_set and self.target is not None and self.is_published is False:
@@ -323,7 +327,7 @@ class MinimalSubscriber(Node):
 				# 			#self.trails = [trail[self.remove_index:] for trail in self.trails]
 				# 			self.trails[i] = self.trails[i][40:]
 				# Draw the current position of the circle
-				self.draw_waypoints(color_image, self.waypoints[self.waypoint_threshold:])
+				self.draw_waypoints(color_image, self.waypoints[self.waypoint_threshold:], self.numbers[self.waypoint_threshold:])
 				if pos != (None,None):
 					self.draw_circle(color_image, (int(pos[0]), int(pos[1])), self.radius, self.circle_colors[i])
 				if self.is_target_set and (self.target is not None):
