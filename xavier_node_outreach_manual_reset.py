@@ -44,7 +44,7 @@ class MinimalSubscriber(Node):
 		self.is_published = False
 		self.reset = False
 		self.rover_at_target = False
-		self.waypoints = [(100,400), (100,100),(300,200),(500,100),(500,400)]
+		#self.waypoints = [(100,400), (100,100),(300,200),(500,100),(500,400)]
 		self.waypoints = [(500,100), (500,400),(300,200),(100,400),(100,100)]
 		self.numbers = [1,2,3,4,5]
 		self.waypoint_threshold = 0
@@ -364,6 +364,28 @@ class MinimalSubscriber(Node):
 
 
 
+def find_closest_coordinate(coordinates, target):
+    """
+    Find the closest coordinate to the target.
+
+    :param coordinates: List of tuples, where each tuple represents a 2D coordinate (x, y)
+    :param target: Tuple representing the target 2D coordinate (x, y)
+    :return: Tuple representing the closest coordinate
+    """
+    coordinates = np.array(coordinates)
+    target = np.array(target)
+    
+    # Calculate the Euclidean distance from each coordinate to the target
+    distances = np.linalg.norm(coordinates - target, axis=1)
+    
+    # Find the index of the minimum distance
+    closest_index = np.argmin(distances)
+    
+    # Return the closest coordinate
+    return tuple(coordinates[closest_index])
+
+
+
 
 # HOST = '192.168.1.134'  # Xavier's IP address
 # VIDEO_PORT = 9999
@@ -391,6 +413,7 @@ def coordinate_reception(xavier_node):
 			else:
 				coord_data = ast.literal_eval(coord_data)
 				xavier_node.target = coord_data
+				xavier_node.target = find_closest_coordinate(xavier_node.waypoints[xavier_node.threshold:], coord_data)
 				xavier_node.is_target_set = True
 				xavier_node.is_published = False
 				print(f"Received coordinates: {coord_data}")
