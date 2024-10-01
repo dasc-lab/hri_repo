@@ -93,7 +93,7 @@ class MinimalSubscriber(Node):
 		self.curr_time = time.time()
 		self.image_time = time.time()
 		self.transmit_time = time.time()
-		#self.subscription  # prevent unused variable warning
+		
 	###################################################################################################
 	###################### Set up Callbacks ######################
 	###################################################################################################
@@ -135,7 +135,7 @@ class MinimalSubscriber(Node):
 	def draw_circle(self, img, center, radius, color):
 		cv2.circle(img, center, radius, color, thickness=2)  
 
-# Function to send circle data to Unity
+# send circle data to Unity
 	def send_circle_data(client_socket, circles):
 		radius = 2
 		circle_data = ','.join(f"{x},{y},{radius}" for x, y in circles)
@@ -230,7 +230,7 @@ class MinimalSubscriber(Node):
 			self.is_published = True
 		
 		if not (not robot_trans or not robot_quat ):
-			# print("inside loop")
+			
 			
 
 			r_robot = R.from_quat(np.array([robot_quat.x, robot_quat.y, robot_quat.z,robot_quat.w]))
@@ -370,9 +370,7 @@ def main(args=None):
 	socket_thread.start()
 	print("here")
 	rclpy.spin(minimal_subscriber)
-	# Destroy the node explicitly
-	# (optional - otherwise it will be done automatically
-	# when the garbage collector destroys the node object)
+	
 	minimal_subscriber.destroy_node()
 
 	rclpy.shutdown()
